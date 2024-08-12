@@ -94,10 +94,13 @@ void sniffer_init(void *pvParameters)
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     wifi_country_t ctry_cfg = {.cc="US", .schan = 1, .nchan = 13};
 
-    ESP_ERROR_CHECK(esp_wifi_set_country(&ctry_cfg));
+    ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
     ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
-    ESP_ERROR_CHECK(esp_wifi_set_promiscuous(false));
+    ESP_ERROR_CHECK(esp_wifi_set_country(&ctry_cfg));
+    ESP_ERROR_CHECK(esp_wifi_start());
+    
+    // turn on mon mode, change channel
     ESP_ERROR_CHECK(esp_wifi_set_promiscuous(true));
     ESP_ERROR_CHECK(esp_wifi_set_channel(random_num(1, 13), WIFI_SECOND_CHAN_NONE));
 
@@ -158,7 +161,6 @@ void sniffer_callback(void *buf, wifi_promiscuous_pkt_type_t type)
     wifi_promiscuous_pkt_t *snifferPacket = (wifi_promiscuous_pkt_t *)buf;
     int len = snifferPacket->rx_ctrl.sig_len;
 
-    printf("\n");
     printf("Packet type: %s\n", packet_type);
     printf("Packet Length: %i\n", len);
     printf("Packet Mac Address: %s\n", mac);
