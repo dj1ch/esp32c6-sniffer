@@ -46,6 +46,12 @@
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
 
+// gpio libraries
+#include "driver/gpio.h"
+
+// ESP32 LED PIN
+#define LED_PIN 7
+
 /**
  * IEEE 802.11 Wifi Structures from ESP32-Sniffer example
  * Source: https://github.com/lpodkalicki/blog/blob/master/esp32/016_wifi_sniffer/main/main.c#L22
@@ -68,12 +74,15 @@ typedef struct {
 	uint8_t payload[0]; /* network data ended with 4 bytes csum (CRC32) */
 } wifi_ieee80211_packet_t;
 
-// function declarations
 int random_num(int min, int max);
 void sniffer_init(void *pvParameters);
+void sniffer_stop();
 void get_mac(char *addr, const unsigned char *buff, int offset);
 char *extract_mac(const unsigned char *buff);
 char *get_type(wifi_promiscuous_pkt_type_t type);
+int current_channel();
+bool switch_channel(int channel);
+bool filter_mac(char *mac, char *current);
 void sniffer_callback(void *buf, wifi_promiscuous_pkt_type_t type);
 
 // freeRTOS handles
@@ -82,11 +91,15 @@ TaskHandle_t Task2; // to do: serial task?
 
 /**
  * Generates random number
+ * @param min Minimum number
+ * @param max Maximum number
+ * @return The random number
  */
 int random_num(int min, int max) { return min + rand() % (max - min + 1); }
 
 /**
  * Starts the sniffer, initializes configuration
+ * @param pvParameters Ignore this, it's for freeRTOS
  */
 void sniffer_init(void *pvParameters) 
 {
@@ -104,6 +117,8 @@ void sniffer_init(void *pvParameters)
     ESP_ERROR_CHECK(esp_wifi_set_promiscuous(true));
     ESP_ERROR_CHECK(esp_wifi_set_channel(random_num(1, 13), WIFI_SECOND_CHAN_NONE));
 
+    printf("Currently on channel %i", current_channel());
+
     // set cb
     esp_wifi_set_promiscuous_rx_cb(&sniffer_callback);
 
@@ -111,6 +126,14 @@ void sniffer_init(void *pvParameters)
     while (true) {
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
+}
+
+/**
+ * Stops the sniffer callback
+ */
+void stop_sniffer(void)
+{
+    esp_wifi_set_promiscuous_rx_cb(NULL);
 }
 
 /**
@@ -128,6 +151,7 @@ void get_mac(char *addr, const unsigned char *buff, int offset) {
 /**
  * Extract Mac Address using get_mac()
  * @param buff Buffer to use
+ * @return Source Mac Address from buffer
  */
 char *extract_mac(const unsigned char *buff) {
     static char addr[] = "00:00:00:00:00:00";
@@ -135,6 +159,11 @@ char *extract_mac(const unsigned char *buff) {
     return addr;
 }
 
+/**
+ * Acquires the type of Wifi packet
+ * @param type Type of packet
+ * @return Specific type of Wifi packet
+ */
 char *get_type(wifi_promiscuous_pkt_type_t type) {
     switch(type) {
         case WIFI_PKT_MGMT:
@@ -149,22 +178,83 @@ char *get_type(wifi_promiscuous_pkt_type_t type) {
 }
 
 /**
+ * Returns current Wifi channel as an integer
+ * @return Current Wifi channel
+ */
+int current_channel() 
+{
+    uint8_t primary;
+    wifi_second_chan_t second;
+    esp_wifi_get_channel(&primary, &second);
+    return primary;
+}
+
+/**
+ * Switch channels
+ * @param channel Channel to switch to
+ * @return Whether or not the switch was successful
+ */
+bool switch_channel(int channel)
+{
+    // switch channel then check if our current channel matches
+    ESP_ERROR_CHECK(esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE));
+    if (channel == current_channel()) 
+    {
+        return true;
+    } 
+    else 
+    {
+        return false;
+    }
+}
+
+/**
+ * Checks whether or not mac we're filtering for matches the current mac address found in the callback
+ * @param mac
+ * @param current
+ * @return Result of whether or not mac addresses match
+ */
+bool filter_mac(char *mac, char *current) 
+{
+    if (mac == current) 
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+/**
  * Sniffer callback
  * @param buf Packet buffer
  * @param type Type of Packet
  */
 void sniffer_callback(void *buf, wifi_promiscuous_pkt_type_t type)
 {
+    // start with LED off
+    esp_rom_gpio_pad_select_gpio(LED_PIN);
+    gpio_set_direction(LED_PIN, GPIO_MODE_OUTPUT);
+    gpio_set_level(LED_PIN, 0);
+
     char *packet_type = get_type(type);
     char *mac = extract_mac(buf);
 
     wifi_promiscuous_pkt_t *snifferPacket = (wifi_promiscuous_pkt_t *)buf;
     int len = snifferPacket->rx_ctrl.sig_len;
 
+    // turn on
+    gpio_set_level(LED_PIN, 1);
+
     printf("Packet type: %s\n", packet_type);
     printf("Packet Length: %i\n", len);
     printf("Packet Mac Address: %s\n", mac);
+    printf("Current Channel: %i\n", current_channel());
     printf("\n");
+
+    // turn off
+    gpio_set_level(LED_PIN, 0);
 }
 
 void app_main(void)
