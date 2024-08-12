@@ -23,6 +23,7 @@
 
 // standard c libraries
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 // esp32 wifi libraries
@@ -67,9 +68,22 @@ typedef struct {
 	uint8_t payload[0]; /* network data ended with 4 bytes csum (CRC32) */
 } wifi_ieee80211_packet_t;
 
+// function declarations
+int random_num(int min, int max);
+void sniffer_init(void *pvParameters);
+void get_mac(char *addr, const unsigned char *buff, int offset);
+char *extract_mac(const unsigned char *buff);
+char *get_type(wifi_promiscuous_pkt_type_t type);
+void sniffer_callback(void *buf, wifi_promiscuous_pkt_type_t type);
+
 // freeRTOS handles
 TaskHandle_t sniffer_task;
-TaskHandle_t Task2;
+TaskHandle_t Task2; // to do: serial task?
+
+/**
+ * Generates random number
+ */
+int random_num(int min, int max) { return min + rand() % (max - min + 1); }
 
 /**
  * Starts the sniffer, initializes configuration
@@ -80,15 +94,15 @@ void sniffer_init(void *pvParameters)
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     wifi_country_t ctry_cfg = {.cc="US", .schan = 1, .nchan = 13};
 
-    // applying
-    ESP_ERROR_CHECK(esp_wifi_set_promiscuous(false));
-    ESP_ERROR_CHECK(esp_wifi_set_promiscuous(true));
     ESP_ERROR_CHECK(esp_wifi_set_country(&ctry_cfg));
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
     ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
+    ESP_ERROR_CHECK(esp_wifi_set_promiscuous(false));
+    ESP_ERROR_CHECK(esp_wifi_set_promiscuous(true));
+    ESP_ERROR_CHECK(esp_wifi_set_channel(random_num(1, 13), WIFI_SECOND_CHAN_NONE));
 
     // set cb
-    esp_wifi_set_promiscuous_rx_cb(&sniffer_task);
+    esp_wifi_set_promiscuous_rx_cb(&sniffer_callback);
 
     // wait forever
     while (true) {
