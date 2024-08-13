@@ -1,5 +1,3 @@
-# esp32c6-sniffer
-
 ![GitHub contributors](https://img.shields.io/github/contributors/dj1ch/esp32c6-sniffer)
 ![GitHub forks](https://img.shields.io/github/forks/dj1ch/esp32c6-sniffer)
 ![GitHub Repo stars](https://img.shields.io/github/stars/dj1ch/esp32c6-sniffer)
