@@ -149,4 +149,5 @@ Project Link: [https://github.com/dj1ch/esp32c6-sniffer](https://github.com/dj1c
 
 * [Espressif](https://github.com/espressif/)
 * [ESP32 Wifi Sniffing example](https://github.com/lpodkalicki/blog/blob/master/esp32/016_wifi_sniffer/main/main.c)
+* [ESP32 Advanced Console example](https://github.com/espressif/esp-idf/tree/v5.3/examples/system/console/advanced)
 * And many more...!
