@@ -45,12 +45,9 @@
 #include "linenoise/linenoise.h"
 #include "argtable3/argtable3.h"
 #include "soc/soc_caps.h"
-
-/*
 #include "cmd_nvs.h"
 #include "cmd_system.h"
 #include "cmd_wifi.h"
-*/
 
 // nvs libraries
 #include "nvs.h"
