@@ -68,6 +68,9 @@
 // ESP32 LED PIN
 #define LED_PIN 7
 
+// define terminal thingy
+#define PROMPT_STRING esp32c6
+
 // warnings from https://github.com/espressif/esp-idf/blob/v5.3/examples/system/console/advanced/main/console_example_main.c#L33C1-L45C45
 #if SOC_USB_SERIAL_JTAG_SUPPORTED
 #if !CONFIG_ESP_CONSOLE_SECONDARY_NONE
@@ -252,7 +255,7 @@ void cli_init(void)
 void cli_loop(void *pvParameters)
 {
     // prompt before each line
-    const char* prompt = LOG_COLOR_I PROMPT_STR "> " LOG_RESET_COLOR;
+    const char* prompt = LOG_COLOR_I PROMPT_STRING "> " LOG_RESET_COLOR;
 
     printf("\n"
            "Type 'help' to get the list of commands.\n"
@@ -272,7 +275,7 @@ void cli_loop(void *pvParameters)
         /* Since the terminal doesn't support escape sequences,
          * don't use color codes in the prompt.
          */
-        prompt = PROMPT_STR "> ";
+        prompt = PROMPT_STRING "> ";
     #endif //CONFIG_LOG_COLORS
     }
 
