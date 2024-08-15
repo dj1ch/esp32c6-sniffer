@@ -27,6 +27,26 @@
 extern "C" {
 #endif
 
+// misc
+int random_num(int min, int max);
+
+// sniffer related
+int sniffer_init(int argc, char **argv);
+void sniffer_stop();
+
+// functions relating to sniffer callback
+void get_mac(char *addr, const unsigned char *buff, int offset);
+char *extract_mac(const unsigned char *buff);
+char *get_type(wifi_promiscuous_pkt_type_t type);
+
+// channel stuff
+int current_channel();
+int switch_channel(int argc, char **argv);
+bool filter_mac(char *mac, char *current);
+
+// sniffer callback
+void sniffer_callback(void *buf, wifi_promiscuous_pkt_type_t type);
+
 // Register WiFi functions
 void register_wifi(void);
 

@@ -595,7 +595,7 @@ CONFIG_BT_ALARM_MAX_NUM=50
 #
 # Console Library
 #
-# CONFIG_CONSOLE_SORTED_HELP is not set
+CONFIG_CONSOLE_SORTED_HELP=y
 # end of Console Library
 
 #

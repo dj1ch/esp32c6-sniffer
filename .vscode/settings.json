@@ -25,7 +25,18 @@
         "gpio.h": "c",
         "stdio.h": "c",
         "rgb.h": "c",
-        "uart.h": "c"
+        "uart.h": "c",
+        "event_groups.h": "c",
+        "esp_console.h": "c",
+        "esp_event.h": "c",
+        "cmd_wifi.h": "c",
+        "esp_netif.h": "c",
+        "cmd_system.h": "c",
+        "sdkconfig.h": "c",
+        "stddef.h": "c",
+        "esp_heap_caps.h": "c",
+        "freertos.h": "c",
+        "esp_err.h": "c"
     },
     "idf.flashType": "UART"
 }
