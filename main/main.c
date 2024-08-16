@@ -150,22 +150,23 @@ void cli_init(void)
     // disable buffering
     setvbuf(stdin, NULL, _IONBF, 0);
 
+    ESP_LOGI(TAG, "Configuring UART for console");
+
     uart_vfs_dev_port_set_rx_line_endings(CONFIG_ESP_CONSOLE_UART_NUM, ESP_LINE_ENDINGS_CR);
     uart_vfs_dev_port_set_tx_line_endings(CONFIG_ESP_CONSOLE_UART_NUM, ESP_LINE_ENDINGS_CRLF);
 
     // uart config
-        const uart_config_t uart_config = {
-            .baud_rate = CONFIG_ESP_CONSOLE_UART_BAUDRATE,
-            .data_bits = UART_DATA_8_BITS,
-            .parity = UART_PARITY_DISABLE,
-            .stop_bits = UART_STOP_BITS_1,
+    const uart_config_t uart_config = {
+        .baud_rate = CONFIG_ESP_CONSOLE_UART_BAUDRATE,
+        .data_bits = UART_DATA_8_BITS,
+        .parity = UART_PARITY_DISABLE,
+        .stop_bits = UART_STOP_BITS_1,
     #if SOC_UART_SUPPORT_REF_TICK
         .source_clk = UART_SCLK_REF_TICK,
     #elif SOC_UART_SUPPORT_XTAL_CLK
         .source_clk = UART_SCLK_XTAL,
     #endif
-
-        };
+    };
 
     // install uart driver
     ESP_ERROR_CHECK( uart_driver_install(CONFIG_ESP_CONSOLE_UART_NUM,
@@ -177,8 +178,8 @@ void cli_init(void)
 
     // initialize console
     esp_console_config_t console_config = {
-            .max_cmdline_args = 8,
-            .max_cmdline_length = 256,
+        .max_cmdline_args = 8,
+        .max_cmdline_length = 256,
     #if CONFIG_LOG_COLORS
         .hint_color = atoi(LOG_COLOR_CYAN)
     #endif
@@ -205,7 +206,10 @@ void cli_init(void)
         // load command history
         linenoiseHistoryLoad(HISTORY_PATH);
     #endif
+
+    ESP_LOGI(TAG, "CLI initialized successfully");
 }
+
 
 /**
  * Handles commands sent in the console
@@ -279,7 +283,7 @@ void app_main(void)
     nvs_init();
 
     #if CONFIG_STORE_HISTORY
-        initialize_filesystem();
+        fs_init();
         ESP_LOGI(TAG, "Command history enabled");
     #else
         ESP_LOGI(TAG, "Command history disabled");
@@ -302,6 +306,5 @@ void app_main(void)
         register_nvs();
 
     // create tasks
-    // xTaskCreatePinnedToCore(sniffer_init, "Sniffer Task", 4096, NULL, 1, &sniffer_task, 0);
-    // xTaskCreatePinnedToCore(cli_init, "CLI Task", 4096, NULL, 1, &cli_task, 1);
+    xTaskCreatePinnedToCore(cli_loop, "CLI Task", 4096, NULL, 1, &cli_task, 0);
 }
