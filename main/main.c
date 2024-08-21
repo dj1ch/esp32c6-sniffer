@@ -40,6 +40,8 @@
 // drivers
 #include "driver/uart_vfs.h"
 #include "driver/uart.h"
+#include "driver/usb_serial_jtag.h"
+#include "driver/usb_serial_jtag_vfs.h"
 
 // other CLI related libraries
 #include "linenoise/linenoise.h"
@@ -78,14 +80,6 @@ static const char* TAG = "example";
 #endif
 #endif
 
-#ifdef CONFIG_ESP_CONSOLE_USB_CDC
-#error This firmware is incompatible with a USB CDC console.
-#endif // CONFIG_ESP_CONSOLE_USB_CDC
-
-#ifdef CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
-#error This firmware is incompatible with a USB serial JTAG console.
-#endif // CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
-
 #if CONFIG_STORE_HISTORY
 // filesystem
 void fs_init(void);
@@ -96,7 +90,6 @@ void nvs_init(void);
 
 // CLI
 void cli_init(void);
-void cli_loop(void *pvParameters);
 
 // freeRTOS handles
 TaskHandle_t sniffer_task;
@@ -150,31 +143,12 @@ void cli_init(void)
     // disable buffering
     setvbuf(stdin, NULL, _IONBF, 0);
 
-    ESP_LOGI(TAG, "Configuring UART for console");
+    usb_serial_jtag_vfs_set_rx_line_endings(ESP_LINE_ENDINGS_CR);
+    usb_serial_jtag_vfs_set_rx_line_endings(ESP_LINE_ENDINGS_CRLF);
+    usb_serial_jtag_driver_config_t cfg = USB_SERIAL_JTAG_DRIVER_CONFIG_DEFAULT();
+    usb_serial_jtag_driver_install(&cfg);
 
-    uart_vfs_dev_port_set_rx_line_endings(CONFIG_ESP_CONSOLE_UART_NUM, ESP_LINE_ENDINGS_CR);
-    uart_vfs_dev_port_set_tx_line_endings(CONFIG_ESP_CONSOLE_UART_NUM, ESP_LINE_ENDINGS_CRLF);
-
-    // uart config
-    const uart_config_t uart_config = {
-        .baud_rate = CONFIG_ESP_CONSOLE_UART_BAUDRATE,
-        .data_bits = UART_DATA_8_BITS,
-        .parity = UART_PARITY_DISABLE,
-        .stop_bits = UART_STOP_BITS_1,
-    #if SOC_UART_SUPPORT_REF_TICK
-        .source_clk = UART_SCLK_REF_TICK,
-    #elif SOC_UART_SUPPORT_XTAL_CLK
-        .source_clk = UART_SCLK_XTAL,
-    #endif
-    };
-
-    // install uart driver
-    ESP_ERROR_CHECK( uart_driver_install(CONFIG_ESP_CONSOLE_UART_NUM,
-            256, 0, 0, NULL, 0) );
-    ESP_ERROR_CHECK( uart_param_config(CONFIG_ESP_CONSOLE_UART_NUM, &uart_config) );
-
-    // vfs
-    uart_vfs_dev_use_driver(CONFIG_ESP_CONSOLE_UART_NUM);
+    usb_serial_jtag_vfs_register();
 
     // initialize console
     esp_console_config_t console_config = {
@@ -210,12 +184,34 @@ void cli_init(void)
     ESP_LOGI(TAG, "CLI initialized successfully");
 }
 
-
-/**
- * Handles commands sent in the console
- */
-void cli_loop(void *pvParameters)
+void app_main(void)
 {
+    // initialize stuff
+    nvs_init();
+
+    #if CONFIG_STORE_HISTORY
+        fs_init();
+        ESP_LOGI(TAG, "Command history enabled");
+    #else
+        ESP_LOGI(TAG, "Command history disabled");
+    #endif
+
+    cli_init();
+
+    // registering
+    esp_console_register_help_command();
+    register_system_common();
+    #if SOC_LIGHT_SLEEP_SUPPORTED
+        register_system_light_sleep();
+    #endif
+    #if SOC_DEEP_SLEEP_SUPPORTED
+        register_system_deep_sleep();
+    #endif
+    #if SOC_WIFI_SUPPORTED
+        register_wifi();
+    #endif
+        register_nvs();
+
     // prompt before each line
     const char* prompt = LOG_COLOR_I PROMPT_STRING "> " LOG_RESET_COLOR;
 
@@ -246,6 +242,7 @@ void cli_loop(void *pvParameters)
         // get a line using linenoise
         char* line = linenoise(prompt);
         if (line == NULL) { // break on EOF or error
+            printf("Line input is null");
             break;
         }
         // add line to history
@@ -255,56 +252,25 @@ void cli_loop(void *pvParameters)
             // save history to fs
             linenoiseHistorySave(HISTORY_PATH);
     #endif
-        }
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
 
-        // run the command
-        int ret;
-        esp_err_t err = esp_console_run(line, &ret);
-        if (err == ESP_ERR_NOT_FOUND) {
-            printf("Unrecognized command\n");
-        } else if (err == ESP_ERR_INVALID_ARG) {
-            // command was empty
-        } else if (err == ESP_OK && ret != ESP_OK) {
-            printf("Command returned non-zero error code: 0x%x (%s)\n", ret, esp_err_to_name(ret));
-        } else if (err != ESP_OK) {
-            printf("Internal error: %s\n", esp_err_to_name(err));
-        }
+    // run the command
+    int ret;
+    esp_err_t err = esp_console_run(line, &ret);
+    if (err == ESP_ERR_NOT_FOUND) {
+        printf("Unrecognized command\n");
+    } else if (err == ESP_ERR_INVALID_ARG) {
+        // command was empty
+    } else if (err == ESP_OK && ret != ESP_OK) {
+        printf("Command returned non-zero error code: 0x%x (%s)\n", ret, esp_err_to_name(ret));
+    } else if (err != ESP_OK) {
+        printf("Internal error: %s\n", esp_err_to_name(err));
+    }
         // free the heap
         linenoiseFree(line);
     }
 
     ESP_LOGE(TAG, "Error or end-of-input, terminating console");
     esp_console_deinit();
-}
-
-void app_main(void)
-{
-    // initialize stuff
-    nvs_init();
-
-    #if CONFIG_STORE_HISTORY
-        fs_init();
-        ESP_LOGI(TAG, "Command history enabled");
-    #else
-        ESP_LOGI(TAG, "Command history disabled");
-    #endif
-
-    cli_init();
-
-    // registering
-    esp_console_register_help_command();
-    register_system_common();
-    #if SOC_LIGHT_SLEEP_SUPPORTED
-        register_system_light_sleep();
-    #endif
-    #if SOC_DEEP_SLEEP_SUPPORTED
-        register_system_deep_sleep();
-    #endif
-    #if SOC_WIFI_SUPPORTED
-        register_wifi();
-    #endif
-        register_nvs();
-
-    // create tasks
-    xTaskCreatePinnedToCore(cli_loop, "CLI Task", 4096, NULL, 1, &cli_task, 0);
 }

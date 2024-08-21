@@ -36,7 +36,11 @@
         "stddef.h": "c",
         "esp_heap_caps.h": "c",
         "freertos.h": "c",
-        "esp_err.h": "c"
+        "esp_err.h": "c",
+        "esp_vfs_usb_serial_jtag.h": "c",
+        "usb_serial_jtag.h": "c",
+        "argtable3.h": "c",
+        "usb_serial_jtag_vfs.h": "c"
     },
     "idf.flashType": "UART"
 }
