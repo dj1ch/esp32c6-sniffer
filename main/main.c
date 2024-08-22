@@ -36,6 +36,7 @@
 #include "esp_log.h"
 #include "esp_console.h"
 #include "esp_vfs_fat.h"
+#include "esp_task_wdt.h"
 
 // drivers
 #include "driver/uart_vfs.h"
@@ -73,6 +74,8 @@
 #define PROMPT_STRING "esp32c6"
 static const char* TAG = "example";
 
+#define WDT_TIMEOUT 3 // 3 second timeout
+
 // warnings from https://github.com/espressif/esp-idf/blob/v5.3/examples/system/console/advanced/main/console_example_main.c#L33C1-L45C45
 #if SOC_USB_SERIAL_JTAG_SUPPORTED
 #if !CONFIG_ESP_CONSOLE_SECONDARY_NONE
@@ -90,8 +93,12 @@ void nvs_init(void);
 
 // CLI
 void cli_init(void);
+void cli_loop(void *pvParameters);
 
-// freeRTOS handles
+// watchdog
+void wdt_reset(void *pvParameter);
+
+// freeRTOS handles if needed
 TaskHandle_t sniffer_task;
 TaskHandle_t cli_task;
 
@@ -184,93 +191,120 @@ void cli_init(void)
     ESP_LOGI(TAG, "CLI initialized successfully");
 }
 
-void app_main(void)
+void cli_loop(void *pvParameters)
 {
-    // initialize stuff
-    nvs_init();
+    while (1) {
+        // initialize stuff
+        nvs_init();
 
-    #if CONFIG_STORE_HISTORY
-        fs_init();
-        ESP_LOGI(TAG, "Command history enabled");
-    #else
-        ESP_LOGI(TAG, "Command history disabled");
-    #endif
+        #if CONFIG_STORE_HISTORY
+            fs_init();
+            ESP_LOGI(TAG, "Command history enabled");
+        #else
+            ESP_LOGI(TAG, "Command history disabled");
+        #endif
 
-    cli_init();
+        cli_init();
 
-    // registering
-    esp_console_register_help_command();
-    register_system_common();
-    #if SOC_LIGHT_SLEEP_SUPPORTED
-        register_system_light_sleep();
-    #endif
-    #if SOC_DEEP_SLEEP_SUPPORTED
-        register_system_deep_sleep();
-    #endif
-    #if SOC_WIFI_SUPPORTED
-        register_wifi();
-    #endif
-        register_nvs();
+        // registering
+        esp_console_register_help_command();
+        register_system_common();
+        #if SOC_LIGHT_SLEEP_SUPPORTED
+            register_system_light_sleep();
+        #endif
+        #if SOC_DEEP_SLEEP_SUPPORTED
+            register_system_deep_sleep();
+        #endif
+        #if SOC_WIFI_SUPPORTED
+            register_wifi();
+        #endif
+            register_nvs();
 
-    // prompt before each line
-    const char* prompt = LOG_COLOR_I PROMPT_STRING "> " LOG_RESET_COLOR;
+        // prompt before each line
+        const char* prompt = LOG_COLOR_I PROMPT_STRING "> " LOG_RESET_COLOR;
 
-    printf("\n"
+        printf("\n"
            "Type 'help' to get the list of commands.\n"
            "Use UP/DOWN arrows to navigate through command history.\n"
            "Press TAB when typing command name to auto-complete.\n"
            "Press Enter or Ctrl+C will terminate the console environment.\n");
 
         /* Figure out if the terminal supports escape sequences */
-    int probe_status = linenoiseProbe();
-    if (probe_status) { /* zero indicates success */
-        printf("\n"
+        int probe_status = linenoiseProbe();
+        if (probe_status) { /* zero indicates success */
+            printf("\n"
                "Your terminal application does not support escape sequences.\n"
                "Line editing and history features are disabled.\n"
                "On Windows, try using Putty instead.\n");
-        linenoiseSetDumbMode(1);
-    #if CONFIG_LOG_COLORS
-        /* Since the terminal doesn't support escape sequences,
-         * don't use color codes in the prompt.
-         */
-        prompt = PROMPT_STRING "> ";
-    #endif //CONFIG_LOG_COLORS
-    }
-
-    // main loop
-    while(true) {
-        // get a line using linenoise
-        char* line = linenoise(prompt);
-        if (line == NULL) { // break on EOF or error
-            printf("Line input is null");
-            break;
+            linenoiseSetDumbMode(1);
+        #if CONFIG_LOG_COLORS
+            /* Since the terminal doesn't support escape sequences,
+            * don't use color codes in the prompt.
+            */
+            prompt = PROMPT_STRING "> ";
+        #endif //CONFIG_LOG_COLORS
         }
-        // add line to history
-        if (strlen(line) > 0) {
-            linenoiseHistoryAdd(line);
-    #if CONFIG_STORE_HISTORY
-            // save history to fs
-            linenoiseHistorySave(HISTORY_PATH);
-    #endif
-        vTaskDelay(pdMS_TO_TICKS(10));
+
+        // main loop
+        while(1) {
+            // reset watchdog!!!
+            esp_task_wdt_reset();
+            
+            // get a line using linenoise
+            char* line = linenoise(prompt);
+            if (line == NULL) { // break on EOF or error
+                printf("Line input is null");
+                break;
+            }
+            // add line to history
+            if (strlen(line) > 0) {
+                linenoiseHistoryAdd(line);
+            #if CONFIG_STORE_HISTORY
+                // save history to fs
+                linenoiseHistorySave(HISTORY_PATH);
+            #endif
+                vTaskDelay(pdMS_TO_TICKS(10));
+            }
+
+            // run the command
+            int ret;
+            esp_err_t err = esp_console_run(line, &ret);
+            if (err == ESP_ERR_NOT_FOUND) {
+                printf("Unrecognized command\n");
+            } else if (err == ESP_ERR_INVALID_ARG) {
+            // command was empty
+            } else if (err == ESP_OK && ret != ESP_OK) {
+                printf("Command returned non-zero error code: 0x%x (%s)\n", ret, esp_err_to_name(ret));
+            } else if (err != ESP_OK) {
+                printf("Internal error: %s\n", esp_err_to_name(err));
+            }
+                // free the heap
+                linenoiseFree(line);
+                vTaskDelay(pdMS_TO_TICKS(100));
+            }
+
+        ESP_LOGE(TAG, "Error or end-of-input, terminating console");
+        esp_console_deinit();
+        vTaskDelete(NULL);
+    }
+}
+
+void app_main(void)
+{
+    // init watchdog
+    static bool wdt_init = false;
+
+    if (!wdt_init) {
+        esp_task_wdt_config_t wdt_cfg = {
+            .timeout_ms = WDT_TIMEOUT * 1000,
+            .idle_core_mask = 0,
+            .trigger_panic = true
+        };
+        esp_task_wdt_init(&wdt_cfg);
+        esp_task_wdt_add(cli_task);
+        wdt_init = true;
     }
 
-    // run the command
-    int ret;
-    esp_err_t err = esp_console_run(line, &ret);
-    if (err == ESP_ERR_NOT_FOUND) {
-        printf("Unrecognized command\n");
-    } else if (err == ESP_ERR_INVALID_ARG) {
-        // command was empty
-    } else if (err == ESP_OK && ret != ESP_OK) {
-        printf("Command returned non-zero error code: 0x%x (%s)\n", ret, esp_err_to_name(ret));
-    } else if (err != ESP_OK) {
-        printf("Internal error: %s\n", esp_err_to_name(err));
-    }
-        // free the heap
-        linenoiseFree(line);
-    }
-
-    ESP_LOGE(TAG, "Error or end-of-input, terminating console");
-    esp_console_deinit();
+    // create task
+    xTaskCreatePinnedToCore(cli_loop, "CLI Task", 2048, NULL, 1, &cli_task, 0);
 }
