@@ -179,22 +179,5 @@ void cli_init(void)
 
 void app_main(void)
 {
-    // init watchdog
-    static bool wdt_init = false;
-
-    if (!wdt_init) {
-        esp_task_wdt_config_t wdt_cfg = {
-            .timeout_ms = WDT_TIMEOUT * 1000,
-            .idle_core_mask = 0,
-            .trigger_panic = true
-        };
-        esp_task_wdt_init(&wdt_cfg);
-        esp_task_wdt_add(cli_task);
-        wdt_init = true;
-    }
-
-    // create task
-    // xTaskCreatePinnedToCore(cli_init, "CLI Task", 2048, NULL, 1, &cli_task, 0);
-
     cli_init();
 }
