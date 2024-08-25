@@ -296,10 +296,10 @@ void sniffer_callback(void *buf, wifi_promiscuous_pkt_type_t type)
 
 void register_wifi(void)
 {
-    start_args.mac = arg_str0(NULL, "mac", "<m>", "Mac address to sniff for");
+    start_args.mac = arg_str0(NULL, "mac", "<mac_address>", "Start sniffer with mac address to find, if needed");
     start_args.end = arg_end(2);
 
-    switchchannel_args.channel = arg_int0(NULL, "channel", "<c>", "Channel to switch to");
+    switchchannel_args.channel = arg_int0(NULL, "channel", "<channel>", "Switches to specified channel");
     switchchannel_args.end = arg_end(2);
 
     const esp_console_cmd_t start_cmd = {

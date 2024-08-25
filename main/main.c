@@ -85,16 +85,6 @@ void fs_init(void);
 // nvs
 void nvs_init(void);
 
-// CLI
-void cli_init(void);
-
-// watchdog
-void wdt_reset(void *pvParameter);
-
-// freeRTOS handles if needed
-TaskHandle_t sniffer_task;
-TaskHandle_t cli_task;
-
 #if CONFIG_STORE_HISTORY
 
 #define MOUNT_PATH "/data"
@@ -131,10 +121,7 @@ void nvs_init(void)
     ESP_ERROR_CHECK(err);
 }
 
-/**
- * Initializes the console
- */
-void cli_init(void)
+void app_main(void)
 {
     // init NVS and fs if needed
     nvs_init();
@@ -151,9 +138,13 @@ void cli_init(void)
     // commands
     esp_console_register_help_command();
     register_system_common();
+
+    // why
     #if SOC_WIFI_SUPPORTED
     register_wifi();
     #endif
+
+    // register nvs after initializing it
     register_nvs();
 
     // initialize repl
@@ -173,11 +164,4 @@ void cli_init(void)
     #else
     #error Unsupported console type
     #endif
-
-}
-
-
-void app_main(void)
-{
-    cli_init();
 }
