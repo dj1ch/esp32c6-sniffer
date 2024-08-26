@@ -129,6 +129,20 @@ void app_main(void)
     fs_init();
     #endif
 
+    // set wifi config
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    wifi_country_t ctry_cfg = {.cc="US", .schan = 1, .nchan = 13};
+
+    // i forgot to do this :skull:
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+    ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
+    ESP_ERROR_CHECK(esp_wifi_set_country(&ctry_cfg));
+    ESP_ERROR_CHECK(esp_wifi_start());
+
+    // turn on mon mode, change channel
+    ESP_ERROR_CHECK(esp_wifi_set_promiscuous(true));
+    ESP_ERROR_CHECK(esp_wifi_set_channel(random_num(1, 13), WIFI_SECOND_CHAN_NONE));
+
     // configure REPL
     esp_console_repl_t *repl = NULL;
     esp_console_repl_config_t repl_config = ESP_CONSOLE_REPL_CONFIG_DEFAULT();

@@ -112,19 +112,6 @@ int sniffer_init(int argc, char **argv)
         filter = true; // enable filtering
     }
 
-    // set wifi config
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    wifi_country_t ctry_cfg = {.cc="US", .schan = 1, .nchan = 13};
-
-    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-    ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
-    ESP_ERROR_CHECK(esp_wifi_set_country(&ctry_cfg));
-    ESP_ERROR_CHECK(esp_wifi_start());
-    
-    // turn on mon mode, change channel
-    ESP_ERROR_CHECK(esp_wifi_set_promiscuous(true));
-    ESP_ERROR_CHECK(esp_wifi_set_channel(random_num(1, 13), WIFI_SECOND_CHAN_NONE));
-
     printf("Currently on channel %i", current_channel());
 
     // set cb
@@ -213,6 +200,12 @@ int switch_channel(int argc, char **argv)
 
     int channel = switchchannel_args.channel->ival[0];  // access channel number
 
+    // double check
+    if (channel < 1 || channel > 13) {
+        printf("Invalid channel. Must be between 1 and 13.\n");
+        return 1;
+    }
+
     // switch channels
     ESP_ERROR_CHECK(esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE));
 
@@ -228,15 +221,9 @@ int switch_channel(int argc, char **argv)
  */
 bool filter_mac(char *mac, char *current) 
 {
-    if (mac == current) 
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }
+    return strcmp(mac, current) == 0;
 }
+
 
 /**
  * Sniffer callback
