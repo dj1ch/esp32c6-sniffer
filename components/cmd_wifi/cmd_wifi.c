@@ -206,12 +206,41 @@ int switch_channel(int argc, char **argv)
         return 1;
     }
 
-    // switch channels
-    ESP_ERROR_CHECK(esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE));
+    printf("Switching to channel %d\n", channel);
 
-    printf("Switched to channel %d\n", channel);
+    // disable promiscuous mode before switching channel
+    esp_err_t ret = esp_wifi_set_promiscuous(false);
+    if (ret != ESP_OK) {
+        printf("Failed to disable promiscuous mode: %d\n", ret);
+        return 1;
+    }
+
+    // set to station mode
+    ret = esp_wifi_set_mode(WIFI_MODE_STA);
+    if (ret != ESP_OK) {
+        printf("Failed to set mode to STA: %d\n", ret);
+        return 1;
+    }
+
+    // set the channel
+    ret = esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+    if (ret != ESP_OK) {
+        printf("Failed to set channel: %d\n", ret);
+        return 1;
+    }
+
+    printf("\nSwitched to channel %i\n", current_channel());
+
+    // re-enable promiscuous mode
+    ret = esp_wifi_set_promiscuous(true);
+    if (ret != ESP_OK) {
+        printf("Failed to enable promiscuous mode: %d\n", ret);
+        return 1;
+    }
+
     return 0;
 }
+
 
 /**
  * Checks whether or not mac we're filtering for matches the current mac address found in the callback
@@ -232,6 +261,9 @@ bool filter_mac(char *mac, char *current)
  */
 void sniffer_callback(void *buf, wifi_promiscuous_pkt_type_t type)
 {
+    wifi_promiscuous_pkt_t *snifferPacket = (wifi_promiscuous_pkt_t *)buf;
+    int len = snifferPacket->rx_ctrl.sig_len;
+
     // start with LED off
     esp_rom_gpio_pad_select_gpio(LED_PIN);
     gpio_set_direction(LED_PIN, GPIO_MODE_OUTPUT);
@@ -241,11 +273,14 @@ void sniffer_callback(void *buf, wifi_promiscuous_pkt_type_t type)
     char *mac = extract_mac(buf);
 
     if (filter && strcmp(mac, target_mac) != 0) {
+        printf("Packet type: %s\n", packet_type);
+        printf("Packet Length: %i\n", len);
+        printf("Packet Mac Address: %s\n", mac);
+        printf("Current Channel: %i\n", current_channel());
+        printf("\n");
+
         return;
     }
-
-    wifi_promiscuous_pkt_t *snifferPacket = (wifi_promiscuous_pkt_t *)buf;
-    int len = snifferPacket->rx_ctrl.sig_len;
 
     if (filter && (mac == target_mac)) {
         // turn on led once found
@@ -281,6 +316,11 @@ void sniffer_callback(void *buf, wifi_promiscuous_pkt_type_t type)
     }
 }
 
+int get_channel() {
+    printf("Current channel: %i\n", current_channel());
+    return 0;
+}
+
 void register_wifi(void)
 {
     start_args.mac = arg_str0(NULL, "mac", "<mac_address>", "Start sniffer with mac address to find, if needed");
@@ -305,8 +345,17 @@ void register_wifi(void)
         .argtable = &switchchannel_args
     };
 
+    const esp_console_cmd_t currentchannel_cmd = {
+        .command = "currentchannel",
+        .help = "Returns current WiFi channel as an integer",
+        .hint = NULL,
+        .func = &get_channel,
+        .argtable = NULL
+    };
+
     ESP_ERROR_CHECK(esp_console_cmd_register(&start_cmd));
     ESP_ERROR_CHECK(esp_console_cmd_register(&switchchannel_cmd));
+    ESP_ERROR_CHECK(esp_console_cmd_register(&currentchannel_cmd));
 }
 
 #endif // CONFIG_SOC_WIFI_SUPPORTED
