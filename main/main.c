@@ -134,20 +134,36 @@ void app_main(void)
 
     esp_log_level_set("*", ESP_LOG_VERBOSE);
 
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    esp_err_t wifi_init_result = esp_wifi_init(&cfg);
+    // configs
+    wifi_init_config_t wifi_cfg = WIFI_INIT_CONFIG_DEFAULT();
+    wifi_country_t ctry_cfg = {.cc="US", .schan = 1, .nchan = 13};
+
+    esp_err_t wifi_init_result = esp_wifi_init(&wifi_cfg);
+
     if (wifi_init_result != ESP_OK) {
         ESP_LOGE(TAG, "Failed to initialize Wi-Fi: %d", wifi_init_result);
     } else {
         ESP_LOGI(TAG, "Wi-Fi Successfully initialized");
     }
+
     esp_err_t wifi_storage_result = esp_wifi_set_storage(WIFI_STORAGE_RAM);
+
     if (wifi_storage_result != ESP_OK) {
         ESP_LOGE(TAG, "Failed to set Wi-Fi storage: %d", wifi_storage_result);
     } else {
         ESP_LOGI(TAG, "Wi-Fi RAM storage set");
     }
+
+    esp_err_t wifi_country_result = esp_wifi_set_country(&ctry_cfg);
+
+    if (wifi_country_result != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to set Wi-Fi Country: %d", wifi_country_result);
+    } else {
+        ESP_LOGI(TAG, "Wi-Fi Country set");
+    }
+
     esp_err_t wifi_mode_result = esp_wifi_set_mode(WIFI_MODE_NULL);
+
     if (wifi_mode_result != ESP_OK) {
         ESP_LOGE(TAG, "Failed to set Wi-Fi mode to NULL: %d", wifi_mode_result);
     } else {
@@ -155,6 +171,7 @@ void app_main(void)
     }
 
     esp_err_t wifi_start_result = esp_wifi_start();
+
     if (wifi_start_result != ESP_OK) {
         ESP_LOGE(TAG, "Failed to start WiFi: %s", esp_err_to_name(wifi_start_result));
     } else {

@@ -215,12 +215,8 @@ int switch_channel(int argc, char **argv)
         return 1;
     }
 
-    // set to station mode
-    ret = esp_wifi_set_mode(WIFI_MODE_STA);
-    if (ret != ESP_OK) {
-        printf("Failed to set mode to STA: %d\n", ret);
-        return 1;
-    }
+    // quick delay
+    vTaskDelay(pdMS_TO_TICKS(100));
 
     // set the channel
     ret = esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
@@ -230,6 +226,9 @@ int switch_channel(int argc, char **argv)
     }
 
     printf("\nSwitched to channel %i\n", current_channel());
+
+    // and yet another delay
+    vTaskDelay(pdMS_TO_TICKS(100));
 
     // re-enable promiscuous mode
     ret = esp_wifi_set_promiscuous(true);
