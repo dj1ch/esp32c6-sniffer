@@ -62,8 +62,9 @@ void register_system_common(void)
     register_log_level();
 }
 
-
-/* 'version' command */
+//-------------------------------------------------------------------------------------------------------------------------
+// 'version' command
+//-------------------------------------------------------------------------------------------------------------------------
 static int get_version(int argc, char **argv)
 {
     const char *model;
@@ -89,6 +90,18 @@ static int get_version(int argc, char **argv)
             break;
         case CHIP_ESP32C2:
             model = "ESP32-C2";
+            break;
+        case CHIP_ESP32C6:
+            model = "ESP32-C6";
+            break;
+        case CHIP_ESP32C61:
+            model = "ESP32-C61";
+            break;
+        case CHIP_ESP32P4:
+            model = "ESP32-P4";
+            break;
+        case CHIP_POSIX_LINUX:
+            model = "POSIX-LINUX";
             break;
         default:
             model = "Unknown";
@@ -124,7 +137,9 @@ static void register_version(void)
     ESP_ERROR_CHECK( esp_console_cmd_register(&cmd) );
 }
 
-/** 'restart' command restarts the program */
+//-------------------------------------------------------------------------------------------------------------------------
+// 'restart' command restarts the program
+//-------------------------------------------------------------------------------------------------------------------------
 
 static int restart(int argc, char **argv)
 {
@@ -143,7 +158,9 @@ static void register_restart(void)
     ESP_ERROR_CHECK( esp_console_cmd_register(&cmd) );
 }
 
-/** 'free' command prints available heap memory */
+//-------------------------------------------------------------------------------------------------------------------------
+// 'free' command prints available heap memory
+//-------------------------------------------------------------------------------------------------------------------------
 
 static int free_mem(int argc, char **argv)
 {
@@ -161,8 +178,9 @@ static void register_free(void)
     };
     ESP_ERROR_CHECK( esp_console_cmd_register(&cmd) );
 }
-
-/* 'heap' command prints minumum heap size */
+//-------------------------------------------------------------------------------------------------------------------------
+// 'heap' command prints minumum heap size
+//-------------------------------------------------------------------------------------------------------------------------
 static int heap_size(int argc, char **argv)
 {
     uint32_t heap_size = heap_caps_get_minimum_free_size(MALLOC_CAP_DEFAULT);
@@ -182,7 +200,9 @@ static void register_heap(void)
 
 }
 
-/** 'tasks' command prints the list of tasks and related information */
+//-------------------------------------------------------------------------------------------------------------------------
+// 'tasks' command prints the list of tasks and related information
+//-------------------------------------------------------------------------------------------------------------------------
 #if WITH_TASKS_INFO
 
 static int tasks_info(int argc, char **argv)
@@ -217,7 +237,9 @@ static void register_tasks(void)
 
 #endif // WITH_TASKS_INFO
 
-/** log_level command changes log level via esp_log_level_set */
+//-------------------------------------------------------------------------------------------------------------------------
+// log_level command changes log level via esp_log_level_set
+//-------------------------------------------------------------------------------------------------------------------------
 
 static struct {
     struct arg_str *tag;
