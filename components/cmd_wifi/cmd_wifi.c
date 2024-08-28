@@ -99,8 +99,25 @@ typedef struct {
 //-------------------------------------------------------------------------------------------------------------------------
 static struct {
     struct arg_str *mac;
+    struct arg_str *type;
     struct arg_end *end;
 } start_args;
+
+//-------------------------------------------------------------------------------------------------------------------------
+// type for packets
+//-------------------------------------------------------------------------------------------------------------------------
+typedef enum {
+    MANAGEMENT_PACKET,
+    DATA_PACKET,
+    MISC_PACKET,
+    UNKNOWN_PACKET
+} sniffer_packet_type_t;
+
+const char *sniffer_packet_type[] = {
+    "management",
+    "data",
+    "misc"
+};
 
 //-------------------------------------------------------------------------------------------------------------------------
 // arguments for switchchannel command
@@ -131,11 +148,29 @@ int sniffer_init(int argc, char **argv)
     //-------------------------------------------------------------------------------------------------------------------------
     // parse command arguments
     //-------------------------------------------------------------------------------------------------------------------------
-    if (argc > 1) {
-        strncpy(target_mac, argv[1], sizeof(target_mac) - 1);
-        filter = true; // enable filtering
+    if (start_args.mac->count > 0) {
+        strncpy(target_mac, start_args.mac->sval[0], sizeof(target_mac) - 1);
+        filter = true;
+        printf("Target MAC: %s\n", target_mac);
     }
 
+    sniffer_packet_type_t packet_type = UNKNOWN_PACKET;
+    if (start_args.type->count >= 1) {
+        const char *input_type = start_args.type->sval[0];
+        for (int i = 0; i < sizeof(sniffer_packet_type); i++) {
+            if (strcmp(input_type, sniffer_packet_type[i]) == 0) {
+                packet_type = (sniffer_packet_type_t)i;
+                printf("Target Packet Type: %s", sniffer_packet_type[i]);
+                break;
+            }
+        }
+
+        if (packet_type == UNKNOWN_PACKET) {
+            printf("Unknown packet type: %s\n", input_type);
+            return 1;
+        }
+    }
+    
     printf("Currently on channel %i", current_channel());
 
     //-------------------------------------------------------------------------------------------------------------------------
@@ -326,7 +361,7 @@ void sniffer_callback(void *buf, wifi_promiscuous_pkt_type_t type)
         return;
     }
 
-    if (filter && (mac == target_mac)) {
+    if (filter && strcmp(mac, target_mac) == 0) {
         //-------------------------------------------------------------------------------------------------------------------------
         // turn on led once found
         //-------------------------------------------------------------------------------------------------------------------------
@@ -375,7 +410,8 @@ int get_channel() {
 
 void register_wifi(void)
 {
-    start_args.mac = arg_str0(NULL, "mac", "<mac_address>", "Start sniffer with mac address to find, if needed");
+    start_args.mac = arg_str0(NULL, "mac", "<mac_address>", "Start sniffer set to find the specified Mac Address");
+    start_args.mac = arg_str0(NULL, "type", "<packet_type>", "Start sniffer set to find the specific Packet Type");
     start_args.end = arg_end(2);
 
     switchchannel_args.channel = arg_int0(NULL, "channel", "<channel>", "Switches to specified channel");
