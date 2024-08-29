@@ -115,8 +115,6 @@ TBA
 
 As of now I would like to implement/am in the progress of implementing:
 
-* Filtering for specific types of packets.
-* Additional user configuration.
 * Video demo
 
 See the [open issues](https://github.com/dj1ch/esp32c6-sniffer/issues) for a list of proposed features (and known issues).

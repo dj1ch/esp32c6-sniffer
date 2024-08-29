@@ -148,6 +148,12 @@ int sniffer_init(int argc, char **argv)
     //-------------------------------------------------------------------------------------------------------------------------
     // parse command arguments
     //-------------------------------------------------------------------------------------------------------------------------
+    int nerrors = arg_parse(argc, argv, (void **)&start_args);
+    if (nerrors != 0) {
+        arg_print_errors(stderr, start_args.end, argv[0]);
+        return 1;
+    }
+
     if (start_args.mac->count > 0) {
         strncpy(target_mac, start_args.mac->sval[0], sizeof(target_mac) - 1);
         filter = true;
@@ -411,7 +417,7 @@ int get_channel() {
 void register_wifi(void)
 {
     start_args.mac = arg_str0(NULL, "mac", "<mac_address>", "Start sniffer set to find the specified Mac Address");
-    start_args.mac = arg_str0(NULL, "type", "<packet_type>", "Start sniffer set to find the specific Packet Type");
+    start_args.type = arg_str0(NULL, "type", "<packet_type>", "Start sniffer set to find the specific Packet Type");
     start_args.end = arg_end(2);
 
     switchchannel_args.channel = arg_int0(NULL, "channel", "<channel>", "Switches to specified channel");
