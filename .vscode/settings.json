@@ -21,7 +21,26 @@
         "esp_mac.h": "c",
         "esp_log.h": "c",
         "esp_wifi_types.h": "c",
-        "esp_system.h": "c"
+        "esp_system.h": "c",
+        "gpio.h": "c",
+        "stdio.h": "c",
+        "rgb.h": "c",
+        "uart.h": "c",
+        "event_groups.h": "c",
+        "esp_console.h": "c",
+        "esp_event.h": "c",
+        "cmd_wifi.h": "c",
+        "esp_netif.h": "c",
+        "cmd_system.h": "c",
+        "sdkconfig.h": "c",
+        "stddef.h": "c",
+        "esp_heap_caps.h": "c",
+        "freertos.h": "c",
+        "esp_err.h": "c",
+        "esp_vfs_usb_serial_jtag.h": "c",
+        "usb_serial_jtag.h": "c",
+        "argtable3.h": "c",
+        "usb_serial_jtag_vfs.h": "c"
     },
     "idf.flashType": "UART"
 }

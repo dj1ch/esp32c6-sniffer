@@ -20,7 +20,7 @@
     <a href="https://github.com/dj1ch/esp32c6-sniffer"><strong>Explore the docs »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/dj1ch/esp32c6-sniffer">View Demo</a>
+    <a href="https://github.com/dj1ch/esp32c6-sniffer">View Demo(TBA)</a>
     ·
     <a href="https://github.com/dj1ch/esp32c6-sniffer/issues">Report Bug</a>
     ·
@@ -50,9 +50,9 @@
 
 This POC (Proof of concept) tool showcases an ESP32C6 with the ESP-IDF framework, to be a WiFi sniffer with the capabilities of looking for user-specified settings. I don't intend for this to be anymore than a miniature version of Wireshark.
 
-As of now, the firmware is very minimal and is only capable of sniffing for packets on a randomly generated channel. Everything else from the CLI to the user-defined settings are still a work in progress.
+As of now, the firmware is very minimal and is only capable of sniffing for packets on a user-set channel. Everything else from the CLI to the user-defined settings are still a work in progress.
 
-Originally, this was meant to be firmware for the M5NanoC6, but it is likely that this can compile on other ESP32 boards.
+Originally, this was meant to be firmware for the M5NanoC6, but it is likely that this can compile on other ESP32 boards if you delete the `sdkconfig`, reset the settings, then compile for the board of your choice.
 
 **As a developer, I do not endorse the illegal use of this firmware. Any sort of trouble you get into I am not responsible for!!!**
 
@@ -82,8 +82,10 @@ git clone https://github.com/dj1ch/esp32c6-sniffer.git
 3. Set board target
 
 ```sh
-idf.py set-target esp32
+idf.py set-target <your_esp32*_board>
 ```
+
+If it asks that you delete the build directory or `sdkconfig`, you will need to do that to compile for that board. 
 
 4. Build the project
 
@@ -113,11 +115,7 @@ TBA
 
 As of now I would like to implement/am in the progress of implementing:
 
-* Mac address searching/filtering.
-* Filtering for specific types of packets.
-* CLI tools that allow things such as channel switching, stopping processes, etc.
-* Additional control over LEDS such as RGB LEDS.
-* Additional user configuration.
+* Video demo
 
 See the [open issues](https://github.com/dj1ch/esp32c6-sniffer/issues) for a list of proposed features (and known issues).
 
@@ -148,5 +146,7 @@ Project Link: [https://github.com/dj1ch/esp32c6-sniffer](https://github.com/dj1c
 ## Acknowledgements
 
 * [Espressif](https://github.com/espressif/)
-* [ESP32 Wifi Sniffing example](https://github.com/lpodkalicki/blog/blob/master/esp32/016_wifi_sniffer/main/main.c)
+* [ESP32 WiFi Sniffing example](https://github.com/lpodkalicki/blog/blob/master/esp32/016_wifi_sniffer/main/main.c)
+* [ESP32 Advanced Console example](https://github.com/espressif/esp-idf/tree/v5.3/examples/system/console/advanced)
+* [ESP32 Basic Console example](https://github.com/espressif/esp-idf/tree/v5.3/examples/system/console/basic)
 * And many more...!
