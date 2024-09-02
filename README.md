@@ -108,7 +108,13 @@ idf.py flash
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-TBA
+In terms of features I didn't add that many. The software itself is very minimal.
+
+Sniffer command list:
+
+* `switchchannel`: Switches channel. Use the `--channel` flag to set the channel you're switching to.
+* `start`: Starts the sniffer. Use the `--type` flag to set the packet type you're searching for (`management`, `data`, or `misc`), which is optional. Use the `--mac` flag to specify a mac address to search for, which is also optional.
+* `currentchannel`: Returns your current channel.
 
 <!-- ROADMAP -->
 ## Roadmap
